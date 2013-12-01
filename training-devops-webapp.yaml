@@ -4,7 +4,6 @@
     - app_version: 0.0.3-SNAPSHOT
   user: ec2-user
   sudo : no
-- include: diamond.yaml
   tasks:
     - name : Install packages
       yum : name={{item}} state=present enablerepo=epel
@@ -64,6 +63,8 @@
     - name: Unzip AppDynamics agent
       command: /usr/bin/unzip /opt/appdynamics/AppServerAgent.zip chdir=/opt/appdynamics
       sudo: yes
+    - name: Unzip distribution
+      command: /bin/tar xzf /home/ec2-user/devops/devops-app-tomcat-prod-{{app_version}}.tgz chdir=/home/ec2-user/devops
     - name: Unzip management
       command: /bin/tar xzf /home/ec2-user/devops/production-ready-application-management-{{app_version}}.tgz chdir=/home/ec2-user/devops
 
