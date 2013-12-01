@@ -1,5 +1,6 @@
-- hosts: graphite
+- hosts: diamond
   vars:
+    - graphite_host: localhost
   user: ec2-user
   sudo : yes
   tasks:
@@ -16,7 +17,7 @@
     - name : Create Diamond log directory
       file : path=/var/log/diamond/ state=directory
     - name : Create diamond.conf file
-      copy : src=diamond/diamond.conf dest=/etc/diamond/diamond.conf
+      template : src=diamond/diamond.conf dest=/etc/diamond/diamond.conf
       notify :
         - Restart Diamond
     - name : Create init script

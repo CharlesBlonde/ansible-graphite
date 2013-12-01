@@ -7,16 +7,16 @@
     - keyname: ansible
     - count : 1
     - instance_names:
-      - training-devops-graphite
-    - instance_type: t1.micro
+      - training-devops-webapp
+    - instance_type: m1.medium
     - group : accept-all
     - ami : ami-c7c0d6b3 # Amazon Linux
     - ec2_url : ec2.eu-west-1.amazonaws.com
     - region : eu-west-1
     - dns_zone : aws.xebiatechevent.info
-  gather_facts: False
+    - graphite_host: training-devops-graphite.aws.xebiatechevent.info
   tasks:
-    - name : Create EC2 ansible instance(s)
+    - name : Create EC2 training-devops instance(s)
       local_action: ec2 keypair={{keyname}} group={{group}} instance_type={{instance_type}} image={{ami}} wait=true ec2_url={{ec2_url}} region={{region}} count={{count}}
       register: ec2
     - name : Set EC2 tags
@@ -27,7 +27,7 @@
       args:
         tags:
           Name: "{{item[1]}}"
-    - name: Record Ansible Route53 DNS
+    - name: Record Route53 DNS
       local_action : route53 command=create zone={{dns_zone}} record={{item[1]}}.{{dns_zone}} type=CNAME ttl=300 overwrite=yes value={{item[0].public_dns_name}}
       when : dns_zone is defined
       with_together:
@@ -37,12 +37,13 @@
       local_action: wait_for host={{item.public_dns_name}} port=22 delay=10 timeout=320 state=started
       with_items: ec2.instances
     - name : Add new instance to host
-      local_action : add_host name={{item.public_dns_name}} groups=graphite
+      local_action : add_host name={{item.public_dns_name}} groups=training-devops-webapp
       with_items: ec2.instances
-    - name : Add new instance to host Diamond
+    - name : Add new instance to host and group diamond
       local_action : add_host name={{item.public_dns_name}} groups=diamond
       with_items: ec2.instances
-- include : graphite.yaml
+- include : training-devops-webapp.yaml
 - include : diamond.yaml
+
 
 

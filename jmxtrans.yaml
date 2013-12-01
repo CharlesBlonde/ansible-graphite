@@ -1,0 +1,29 @@
+- hosts: jmxtrans
+  vars:
+  user: ec2-user
+  sudo : yes
+  tasks:
+    - name : Install packages
+      yum : name={{item}} state=present enablerepo=epel
+      with_items :
+        - java-1.6.0-openjdk-devel
+        - htop
+    - name: Download Jmxtrans RPM
+      get_url: url=https://github.com/downloads/jmxtrans/jmxtrans/jmxtrans-20121016.145842.6a28c97fbb-0.noarch.rpm dest=/home/ec2-user/jmxtrans-20121016.145842.6a28c97fbb-0.noarch.rpm
+    - name: Install jmxtrans RPM
+      command: rpm -Uvh /home/ec2-user/jmxtrans-20121016.145842.6a28c97fbb-0.noarch.rpm creates=/etc/init.d/jmxtrans
+    - name: create maven direcctory
+      file: path=/opt/maven state=directory
+    - name: Download maven
+      get_url: url=http://mir2.ovh.net/ftp.apache.org/dist/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz dest=/opt/maven
+    - name: Untar maven
+      command: /bin/tar xzf /opt/maven/apache-maven-3.0.5-bin.tar.gz chdir=/opt/maven creates=/opt/maven/apache-maven-3.0.5
+    - name: Create maven symlink
+      file: path=/opt/maven/maven3 src=/opt/maven/apache-maven-3.0.5 state=link
+    - name: Download json file
+      command: /opt/maven/maven3/bin/mvn org.apache.maven.plugins:maven-dependency-plugin:2.5:get -DremoteRepositories=xebia-france-snapshot::default::https://repository-cblonde.forge.cloudbees.com/snapshot -Dartifact=fr.xebia.training.devops.app:devops-app-monitoring:0.0.3-SNAPSHOT:json:jmxtrans-prod -Ddest=/var/lib/jmxtrans/devops-app-monitoring-prod.json
+      notify:
+        - Restart jmxtrans
+  handlers:
+    - name: Restart jmxtrans
+      service: name=jmxtrans state=restarted enabled=true

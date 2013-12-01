@@ -1,0 +1,69 @@
+- hosts: training-devops-webapp
+  vars:
+    - appdynamics_archive: /opt/java/appdynamics/agent_3_7_10/AppServerAgent.zip
+    - app_version: 0.0.3-SNAPSHOT
+  user: ec2-user
+  sudo : no
+- include: diamond.yaml
+  tasks:
+    - name : Install packages
+      yum : name={{item}} state=present enablerepo=epel
+      sudo: yes
+      with_items :
+        - java-1.6.0-openjdk-devel
+        - htop
+    - name: Create Tomcat home dir
+      sudo: yes
+      file: path=/opt/tomcat state=directory mode=755
+    - name: Download Tomcat
+      get_url: url=http://mir2.ovh.net/ftp.apache.org/dist/tomcat/tomcat-6/v6.0.37/bin/apache-tomcat-6.0.37.tar.gz dest=/opt/tomcat
+      sudo: yes
+    - name: Untar Tomcat
+      sudo: yes
+      command: /bin/tar xzf apache-tomcat-6.0.37.tar.gz chdir=/opt/tomcat creates=/opt/tomcat/apache-tomcat-6.0.37
+    - name: Create Tomcat Symlink
+      sudo : yes
+      file: path=/opt/tomcat/tomcat6 src=/opt/tomcat/apache-tomcat-6.0.37 state=link
+    - name: Create Catalina base Symlink
+      file: path=/home/ec2-user/tomcat src=/home/ec2-user/devops/devops-app-tomcat-prod-{{app_version}} state=link
+    - name: Create AppDynamics directory
+      file: path=/opt/appdynamics mode=755 state=directory
+      sudo: yes
+      when: appdynamics_archive is defined
+    - name: Copy AppDynamics archive
+      copy: src={{appdynamics_archive}} dest=/opt/appdynamics/AppServerAgent.zip
+      when: appdynamics_archive is defined
+      sudo: yes
+      notify:
+        - Unzip AppDynamics agent
+    - name: create maven direcctory
+      file: path=/opt/maven state=directory
+      sudo: yes
+    - name: Download maven
+      get_url: url=http://mir2.ovh.net/ftp.apache.org/dist/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz dest=/opt/maven
+      sudo: yes
+    - name: Untar maven
+      command: /bin/tar xzf /opt/maven/apache-maven-3.0.5-bin.tar.gz chdir=/opt/maven creates=/opt/maven/apache-maven-3.0.5
+      sudo: yes
+    - name: Create maven symlink
+      file: path=/opt/maven/maven3 src=/opt/maven/apache-maven-3.0.5 state=link
+      sudo: yes
+    - name: Create devops dir
+      file: path=/home/ec2-user/devops state=directory
+    - name: Download devops distribution
+      command: /opt/maven/maven3/bin/mvn org.apache.maven.plugins:maven-dependency-plugin:2.5:get -DremoteRepositories=xebia-france-snapshot::default::https://repository-cblonde.forge.cloudbees.com/snapshot -Dartifact=fr.xebia.training.devops.app:devops-app-tomcat-prod:{{app_version}}:tar.gz:distribution -Ddest=/home/ec2-user/devops/devops-app-tomcat-prod-{{app_version}}.tgz creates=/home/ec2-user/devops/devops-app-tomcat-prod-{{app_version}}.tgz
+      notify:
+        - Unzip distribution
+    - name: Download devops management
+      command: /opt/maven/maven3/bin/mvn org.apache.maven.plugins:maven-dependency-plugin:2.5:get -DremoteRepositories=xebia-france-snapshot::default::https://repository-cblonde.forge.cloudbees.com/snapshot -Dartifact=fr.xebia.training.devops.app:production-ready-application-management:{{app_version}}:tar.gz:distribution -Ddest=/home/ec2-user/devops/production-ready-application-management-{{app_version}}.tgz creates=/home/ec2-user/devops/production-ready-application-management-{{app_version}}.tgz
+      notify:
+        - Unzip management
+    - name: Create management Symlink
+      file: path=/home/ec2-user/management src=/home/ec2-user/devops/production-ready-application-management-{{app_version}} state=link
+  handlers:
+    - name: Unzip AppDynamics agent
+      command: /usr/bin/unzip /opt/appdynamics/AppServerAgent.zip chdir=/opt/appdynamics
+      sudo: yes
+    - name: Unzip management
+      command: /bin/tar xzf /home/ec2-user/devops/production-ready-application-management-{{app_version}}.tgz chdir=/home/ec2-user/devops
+
