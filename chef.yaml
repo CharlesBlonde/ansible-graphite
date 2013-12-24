@@ -1,0 +1,20 @@
+- hosts: chef
+  vars:
+  user: ubuntu
+  sudo : yes
+  tasks:
+    - name : Install multiverse repo
+      apt_repository: repo="{{item}}"
+      with_items:
+        - deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise multiverse
+        - deb-src http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise multiverse
+        - deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise-updates multiverse
+        - deb-src http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise-updates multiverse
+    - name: Update package list
+      apt : update_cache=yes
+    - name : Install packages
+      apt : pkg={{item}} state=present
+      with_items :
+        - htop
+        - ec2-api-tools
+  handlers:
