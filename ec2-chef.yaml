@@ -7,8 +7,11 @@
     - keyname: ansible
     - count : 1
     - instance_names:
-      - chef-cbl
-    - instance_type: m1.small
+      - chef-master-1
+    - instance_names_workstation:
+      - chef-workstation-1
+    - instance_type: m1.medium
+    - instance_type_workstation: t1.micro
     - group : accept-all
     - ami : ami-8e987ef9 # Ubuntu server 12.04-LTS 64bit
     - ec2_url : ec2.eu-west-1.amazonaws.com
@@ -16,10 +19,10 @@
     - dns_zone: aws.xebiatechevent.info
   gather_facts: False
   tasks:
-    - name : Create EC2 ansible instance(s)
+    - name : Create EC2 Chef master instance(s)
       local_action: ec2 keypair={{keyname}} group={{group}} instance_type={{instance_type}} image={{ami}} wait=true ec2_url={{ec2_url}} region={{region}} count={{count}}
       register: ec2
-    - name : Set EC2 tags
+    - name : Set EC2 Chef master tags
       local_action: ec2_tag ec2_url={{ec2_url}} region={{region}} resource={{item[0]}} state=present
       with_together:
         - ec2.instance_ids
@@ -29,19 +32,46 @@
           Name: "{{item[1]}}"
           Owner: "cblonde"
           Dns: "{{item[1}}.{{dns_zone}}"
-    - name: Record Ansible Route53 DNS
+    - name: Record Ansible Route53 DNS Chef master
       local_action : route53 command=create zone={{dns_zone}} record={{item[1]}}.{{dns_zone}} type=CNAME ttl=300 overwrite=yes value={{item[0].public_dns_name}}
       when : dns_zone is defined
       with_together:
         - ec2.instances
         - instance_names
-    - name: Wait for SSH
+    - name : Create EC2 Chef workstation instance(s)
+      local_action: ec2 keypair={{keyname}} group={{group}} instance_type={{instance_type_workstation}} image={{ami}} wait=true ec2_url={{ec2_url}} region={{region}} count={{count}}
+      register: ec2_workstation
+    - name : Set EC2 Chef workstation tags
+      local_action: ec2_tag ec2_url={{ec2_url}} region={{region}} resource={{item[0]}} state=present
+      with_together:
+       - ec2_workstation.instance_ids
+       - instance_names_workstation
+      args:
+        tags:
+          Name: "{{item[1]}}"
+          Owner: "cblonde"
+          Dns: "{{item[1}}.{{dns_zone}}"
+    - name: Record Ansible Route53 DNS Chef workstation
+      local_action : route53 command=create zone={{dns_zone}} record={{item[1]}}.{{dns_zone}} type=CNAME ttl=300 overwrite=yes value={{item[0].public_dns_name}}
+      when : dns_zone is defined
+      with_together:
+        - ec2_workstation.instances
+        - instance_names_workstation
+    - name: Wait for SSH Chef master
       local_action: wait_for host={{item.public_dns_name}} port=22 delay=10 timeout=320 state=started
       with_items: ec2.instances
-    - name : Add new instance to host
+    - name: Wait for SSH Chef workstation
+      local_action: wait_for host={{item.public_dns_name}} port=22 delay=10 timeout=320 state=started
+      with_items: ec2_workstation.instances
+    - name : Add new Chef master instance(s) to host
       local_action : add_host name={{item.public_dns_name}} groups=chef
       with_items: ec2.instances
-- include : chef.yaml
+    - name : Add new Chef worstation instance(s) to host
+      local_action : add_host name={{item.public_dns_name}} groups=chef-workstation
+      with_items: ec2_workstation.instances
+- include: chef-common.yaml
+- include: chef.yaml
+- include: chef-workstation.yaml
 
 
 

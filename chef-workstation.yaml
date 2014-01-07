@@ -1,0 +1,26 @@
+- hosts: chef-workstation
+  vars:
+    - chef_workstation_deb: chef_11.8.2-1.ubuntu.12.04_amd64.deb
+  user: ubuntu
+  sudo : yes
+  tasks:
+    - name : Download Chef package
+      get_url: dest=/root url="https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/{{chef_workstation_deb}}"
+    - name: Install Chef package
+      command: dpkg -i /root/{{chef_workstation_deb}} creates=/opt/chef
+    - name: Install Git package
+      apt : pkg=git state=present
+    - name: Clone chef-repo
+      git: repo="https://github.com/opscode/chef-repo.git" dest=/home/ubuntu/chef-repo update=no
+      sudo: no
+    - name: Create .chef directory
+      file: path=/home/ubuntu/chef-repo/.chef state=directory
+      sudo: no
+    - name: Copy SSH Key
+      copy: src=ssh/ansible.pem dest=/home/ubuntu/.ssh/ansible.pem mode=0600
+      sudo: no
+    - name: Create empty knife.rb
+      file: path=/home/ubuntu/chef-repo/.chef/knife.rb state=touch mode=644
+      sudo: no
+  handlers:
+

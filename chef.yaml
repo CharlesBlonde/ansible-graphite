@@ -1,20 +1,17 @@
 - hosts: chef
   vars:
+    - chef_deb: chef-server_11.0.10-1.ubuntu.12.04_amd64.deb
   user: ubuntu
   sudo : yes
   tasks:
-    - name : Install multiverse repo
-      apt_repository: repo="{{item}}"
-      with_items:
-        - deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise multiverse
-        - deb-src http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise multiverse
-        - deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise-updates multiverse
-        - deb-src http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ precise-updates multiverse
-    - name: Update package list
-      apt : update_cache=yes
-    - name : Install packages
-      apt : pkg={{item}} state=present
-      with_items :
-        - htop
-        - ec2-api-tools
+    - name : Download Chef package
+      get_url: dest=/root url="https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/{{chef_deb}}"
+    - name: Install Chef package
+      command: dpkg -i /root/{{chef_deb}} creates=/usr/bin/chef-server-ctl
+      notify:
+        - Install Chef
+    - name: Allow Root login
+      authorized_key: user=root key="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCnr9pdSH3D8XBC3lHFIY5hKAolggAxkbO8OBzbtB64oBLLdm2x4hFzxDfls4dPzcMiAD/RQTJl2e2xDyR91H/mZEdDjsbm6VTJ6nH9NoV5HKqn4nyotmZG57dS7TVeirG/0BGtaZEH68DC1l+SRt+YGlhvttjhayGz9xvR3w6tRhdoxlWmBMqSEeAB8sx1ugLO8LDpXtcVj6QcpW8UDaacknHKrWTDJ6MW+0MxU0U4NAgx6IB7zV1wzWBHq3eHzaPnzGtiRATrW9UaiyUGSk8wfuSqqUZoa5QkOXO4iXR9zYporSujgIEMXPMusIpCaMEfZREyGL6knmZWBEMwfMHj ansible"
   handlers:
+    - name: Install Chef
+      command: /usr/bin/chef-server-ctl reconfigure
