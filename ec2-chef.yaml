@@ -5,11 +5,29 @@
   connection : local
   vars:
     - keyname: ansible
-    - count : 1
+    - count : 10
     - instance_names:
       - chef-master-1
+      - chef-master-2
+      - chef-master-3
+      - chef-master-4
+      - chef-master-5
+      - chef-master-6
+      - chef-master-7
+      - chef-master-8
+      - chef-master-9
+      - chef-master-10
     - instance_names_workstation:
       - chef-workstation-1
+      - chef-workstation-2
+      - chef-workstation-3
+      - chef-workstation-4
+      - chef-workstation-5
+      - chef-workstation-6
+      - chef-workstation-7
+      - chef-workstation-8
+      - chef-workstation-9
+      - chef-workstation-10
     - instance_type: m1.medium
     - instance_type_workstation: t1.micro
     - group : accept-all
